@@ -78,16 +78,18 @@ class iCaRLNet(nn.Module):
             for P_y in self.exemplar_sets:
                 features = []
                 # Extract feature for each exemplar in P_y
-                for ex in P_y:
-                    ex = Variable(transform(Image.fromarray(ex)), requires_grad = False).cuda()
-                    feature = self.feature_extractor(ex.unsqueeze(0))
-                    feature = feature.squeeze()
-                    feature.data = feature.data / feature.data.norm() # Normalize
-                    features.append(feature)
+                with torch.no_grad():
+                    for ex in P_y:
+                        ex = Variable(transform(Image.fromarray(ex)), requires_grad = False).cuda()
+                        feature = self.feature_extractor(ex.unsqueeze(0))
+                        feature = feature.squeeze()
+                        feature.data = feature.data / feature.data.norm() # Normalize
+                        features.append(feature)
                 features = torch.stack(features)
                 mu_y = features.mean(0).squeeze()
                 mu_y.data = mu_y.data / mu_y.data.norm() # Normalize
                 exemplar_means.append(mu_y)
+                del features
             self.exemplar_means = exemplar_means
             self.compute_means = False
             print ("Done")
