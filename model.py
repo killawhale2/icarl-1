@@ -24,7 +24,7 @@ class iCaRLNet(nn.Module):
         self.bn = nn.BatchNorm1d(feature_size, momentum=0.01)
         self.ReLU = nn.ReLU()
         self.fc = nn.Linear(feature_size, n_classes, bias=False)
-
+        self.feature_extractor = nn.DataParallel(self.feature_extractor)
         self.n_classes = n_classes
         self.n_known = 0
 

@@ -48,7 +48,7 @@ transform_test = transforms.Compose([
 
 # Initialize CNN
 K = 2000 # total number of exemplars
-icarl = nn.DataParallel(iCaRLNet(2048, 10))
+icarl = iCaRLNet(2048, 10)
 icarl.cuda()
 
 
@@ -74,31 +74,31 @@ for s in range(0, total_classes, num_classes):
 
 
     # Update representation via BackProp
-    icarl.module.update_representation(train_set)
-    m = int(K / icarl.module.n_classes)
+    icarl.update_representation(train_set)
+    m = int(K / icarl.n_classes)
 
     # Reduce exemplar sets for known classes
-    icarl.module.reduce_exemplar_sets(m)
+    icarl.reduce_exemplar_sets(m)
 
     # Construct exemplar sets for new classes
-    for y in range(icarl.module.n_known, icarl.module.n_classes):
+    for y in range(icarl.n_known, icarl.n_classes):
         print ("Constructing exemplar set for class-%d..." %(y),)
         images = train_set.get_image_class(y)
-        icarl.module.construct_exemplar_set(images, m, transform_test)
+        icarl.construct_exemplar_set(images, m, transform_test)
         print ("Done")
 
-    for y, P_y in enumerate(icarl.module.exemplar_sets):
+    for y, P_y in enumerate(icarl.exemplar_sets):
         print ("Exemplar set for class-%d:" % (y), P_y.shape)
         #show_images(P_y[:10])
 
-    icarl.module.n_known = icarl.module.n_classes
-    print ("iCaRL classes: %d" % icarl.module.n_known)
+    icarl.n_known = icarl.n_classes
+    print ("iCaRL classes: %d" % icarl.n_known)
 
     total = 0.0
     correct = 0.0
     for indices, images, labels in train_loader:
         images = Variable(images).cuda()
-        preds = icarl.module.classify(images, transform_test)
+        preds = icarl.classify(images, transform_test)
         total += labels.size(0)
         correct += (preds.data.cpu() == labels).sum()
 
@@ -108,7 +108,7 @@ for s in range(0, total_classes, num_classes):
     correct = 0.0
     for indices, images, labels in test_loader:
         images = Variable(images).cuda()
-        preds = icarl.module.classify(images, transform_test)
+        preds = icarl.classify(images, transform_test)
         total += labels.size(0)
         correct += (preds.data.cpu() == labels).sum()
 
