@@ -79,7 +79,7 @@ class iCaRLNet(nn.Module):
                 features = []
                 # Extract feature for each exemplar in P_y
                 for ex in P_y:
-                    ex = Variable(transform(Image.fromarray(ex)), volatile=True).cuda()
+                    ex = Variable(transform(Image.fromarray(ex)), requires_grad = False).cuda()
                     feature = self.feature_extractor(ex.unsqueeze(0))
                     feature = feature.squeeze()
                     feature.data = feature.data / feature.data.norm() # Normalize
@@ -118,7 +118,7 @@ class iCaRLNet(nn.Module):
         # Compute and cache features for each example
         features = []
         for img in images:
-            x = Variable(transform(Image.fromarray(img)), volatile=True).cuda()
+            x = Variable(transform(Image.fromarray(img)), requires_grad = False).cuda()
             feature = self.feature_extractor(x.unsqueeze(0)).data.cpu().numpy()
             feature = feature / np.linalg.norm(feature) # Normalize
             features.append(feature[0])
