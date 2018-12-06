@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 
 from resnet import resnet18
+from resnet import resnet34
 
 # Hyper Parameters
 num_epochs = 50
@@ -17,7 +18,7 @@ class iCaRLNet(nn.Module):
     def __init__(self, feature_size, n_classes):
         # Network architecture
         super(iCaRLNet, self).__init__()
-        self.feature_extractor = resnet18()
+        self.feature_extractor = resnet34()
         self.feature_extractor.fc =\
             nn.Linear(self.feature_extractor.fc.in_features, feature_size)
         self.bn = nn.BatchNorm1d(feature_size, momentum=0.01)
@@ -72,7 +73,7 @@ class iCaRLNet(nn.Module):
         batch_size = x.size(0)
 
         if self.compute_means:
-            print "Computing mean of exemplars...",
+            print ("Computing mean of exemplars..."),
             exemplar_means = []
             for P_y in self.exemplar_sets:
                 features = []
@@ -89,7 +90,7 @@ class iCaRLNet(nn.Module):
                 exemplar_means.append(mu_y)
             self.exemplar_means = exemplar_means
             self.compute_means = False
-            print "Done"
+            print ("Done")
 
         exemplar_means = self.exemplar_means
         means = torch.stack(exemplar_means) # (n_classes, feature_size)
@@ -97,7 +98,7 @@ class iCaRLNet(nn.Module):
         means = means.transpose(1, 2) # (batch_size, feature_size, n_classes)
 
         feature = self.feature_extractor(x) # (batch_size, feature_size)
-        for i in xrange(feature.size(0)): # Normalize
+        for i in range(feature.size(0)): # Normalize
             feature.data[i] = feature.data[i] / feature.data[i].norm()
         feature = feature.unsqueeze(2) # (batch_size, feature_size, 1)
         feature = feature.expand_as(means) # (batch_size, feature_size, n_classes)
@@ -106,7 +107,7 @@ class iCaRLNet(nn.Module):
         _, preds = dists.min(1)
 
         return preds
-        
+
 
     def construct_exemplar_set(self, images, m, transform):
         """Construct an exemplar set for image set
@@ -128,7 +129,7 @@ class iCaRLNet(nn.Module):
 
         exemplar_set = []
         exemplar_features = [] # list of Variables of shape (feature_size,)
-        for k in xrange(m):
+        for k in range(m):
             S = np.sum(exemplar_features, axis=0)
             phi = features
             mu = class_mean
@@ -144,9 +145,9 @@ class iCaRLNet(nn.Module):
             print np.linalg.norm((np.mean(exemplar_features, axis=0) - class_mean))
             #features = np.delete(features, i, axis=0)
             """
-        
+
         self.exemplar_sets.append(np.array(exemplar_set))
-                
+
 
     def reduce_exemplar_sets(self, m):
         for y, P_y in enumerate(self.exemplar_sets):
@@ -169,7 +170,7 @@ class iCaRLNet(nn.Module):
         new_classes = [cls for cls in classes if cls > self.n_classes - 1]
         self.increment_classes(len(new_classes))
         self.cuda()
-        print "%d new classes" % (len(new_classes))
+        print ("%d new classes" % len(new_classes))
 
         # Form combined training set
         self.combine_dataset_with_exemplars(dataset)
@@ -189,7 +190,7 @@ class iCaRLNet(nn.Module):
         # Run network training
         optimizer = self.optimizer
 
-        for epoch in xrange(num_epochs):
+        for epoch in range(num_epochs):
             for i, (indices, images, labels) in enumerate(loader):
                 images = Variable(images).cuda()
                 labels = Variable(labels).cuda()
@@ -197,7 +198,7 @@ class iCaRLNet(nn.Module):
 
                 optimizer.zero_grad()
                 g = self.forward(images)
-                
+
                 # Classification loss for new classes
                 loss = self.cls_loss(g, labels)
                 #loss = loss / len(range(self.n_known, self.n_classes))
@@ -207,7 +208,7 @@ class iCaRLNet(nn.Module):
                     g = F.sigmoid(g)
                     q_i = q[indices]
                     dist_loss = sum(self.dist_loss(g[:,y], q_i[:,y])\
-                            for y in xrange(self.n_known))
+                            for y in range(self.n_known))
                     #dist_loss = dist_loss / self.n_known
                     loss += dist_loss
 
@@ -215,5 +216,5 @@ class iCaRLNet(nn.Module):
                 optimizer.step()
 
                 if (i+1) % 10 == 0:
-                    print ('Epoch [%d/%d], Iter [%d/%d] Loss: %.4f' 
+                    print ('Epoch [%d/%d], Iter [%d/%d] Loss: %.4f'
                            %(epoch+1, num_epochs, i+1, len(dataset)//batch_size, loss.data[0]))

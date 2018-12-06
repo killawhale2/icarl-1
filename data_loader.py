@@ -21,7 +21,7 @@ class iCIFAR10(CIFAR10):
             train_data = []
             train_labels = []
 
-            for i in xrange(len(self.train_data)):
+            for i in range(len(self.train_data)):
                 if self.train_labels[i] in classes:
                     train_data.append(self.train_data[i])
                     train_labels.append(self.train_labels[i])
@@ -33,7 +33,7 @@ class iCIFAR10(CIFAR10):
             test_data = []
             test_labels = []
 
-            for i in xrange(len(self.test_data)):
+            for i in range(len(self.test_data)):
                 if self.test_labels[i] in classes:
                     test_data.append(self.test_data[i])
                     test_labels.append(self.test_labels[i])

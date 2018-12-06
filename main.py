@@ -30,7 +30,7 @@ def show_images(images):
 
 
 # Hyper Parameters
-total_classes = 10
+total_classes = 100
 num_classes = 10
 
 
@@ -48,57 +48,57 @@ transform_test = transforms.Compose([
 
 # Initialize CNN
 K = 2000 # total number of exemplars
-icarl = iCaRLNet(2048, 1)
+icarl = nn.DataParallel(iCaRLNet(2048, 10))
 icarl.cuda()
 
 
 for s in range(0, total_classes, num_classes):
     # Load Datasets
-    print "Loading training examples for classes", range(s, s+num_classes)
-    train_set = iCIFAR10(root='./data',
+    print ("Loading training examples for classes", range(s, s+num_classes))
+    train_set = iCIFAR100(root='./data',
                          train=True,
                          classes=range(s,s+num_classes),
                          download=True,
                          transform=transform_test)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=100,
-                                               shuffle=True, num_workers=2)
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=64,
+                                               shuffle=True, num_workers=0)
 
-    test_set = iCIFAR10(root='./data',
+    test_set = iCIFAR100(root='./data',
                          train=False,
                          classes=range(num_classes),
                          download=True,
                          transform=transform_test)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=100,
-                                               shuffle=True, num_workers=2)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=64,
+                                               shuffle=True, num_workers=0)
 
 
 
     # Update representation via BackProp
-    icarl.update_representation(train_set)
-    m = K / icarl.n_classes
+    icarl.module.update_representation(train_set)
+    m = int(K / icarl.module.n_classes)
 
     # Reduce exemplar sets for known classes
-    icarl.reduce_exemplar_sets(m)
+    icarl.module.reduce_exemplar_sets(m)
 
     # Construct exemplar sets for new classes
-    for y in xrange(icarl.n_known, icarl.n_classes):
-        print "Constructing exemplar set for class-%d..." %(y),
+    for y in range(icarl.module.n_known, icarl.module.n_classes):
+        print ("Constructing exemplar set for class-%d..." %(y),)
         images = train_set.get_image_class(y)
-        icarl.construct_exemplar_set(images, m, transform_test)
-        print "Done"
+        icarl.module.construct_exemplar_set(images, m, transform_test)
+        print ("Done")
 
-    for y, P_y in enumerate(icarl.exemplar_sets):
-        print "Exemplar set for class-%d:" % (y), P_y.shape
+    for y, P_y in enumerate(icarl.module.exemplar_sets):
+        print ("Exemplar set for class-%d:" % (y), P_y.shape)
         #show_images(P_y[:10])
 
-    icarl.n_known = icarl.n_classes
-    print "iCaRL classes: %d" % icarl.n_known
+    icarl.module.n_known = icarl.module.n_classes
+    print ("iCaRL classes: %d" % icarl.module.n_known)
 
     total = 0.0
     correct = 0.0
     for indices, images, labels in train_loader:
         images = Variable(images).cuda()
-        preds = icarl.classify(images, transform_test)
+        preds = icarl.module.classify(images, transform_test)
         total += labels.size(0)
         correct += (preds.data.cpu() == labels).sum()
 
@@ -108,10 +108,8 @@ for s in range(0, total_classes, num_classes):
     correct = 0.0
     for indices, images, labels in test_loader:
         images = Variable(images).cuda()
-        preds = icarl.classify(images, transform_test)
+        preds = icarl.module.classify(images, transform_test)
         total += labels.size(0)
         correct += (preds.data.cpu() == labels).sum()
 
     print('Test Accuracy: %d %%' % (100 * correct / total))
-
-
